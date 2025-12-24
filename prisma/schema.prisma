@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model blog_posts {
+  id            Int      @id @default(autoincrement())
+  slug          String   @unique(map: "slug") @db.VarChar(150)
+  category      String   @db.VarChar(100)
+  title         String   @db.VarChar(255)
+  summary       String   @db.Text
+  author        String   @db.VarChar(150)
+  published_at  DateTime @db.Date
+  read_time_min Int
+  is_active     Boolean? @default(true)
+}
+
+model categories {
+  id       Int        @id @default(autoincrement())
+  code     String     @unique(map: "code") @db.VarChar(50)
+  name     String     @db.VarChar(100)
+  products products[]
+}
+
+model faqs {
+  id            Int      @id @default(autoincrement())
+  question      String   @db.VarChar(255)
+  answer        String   @db.Text
+  display_order Int?     @default(0)
+  is_active     Boolean? @default(true)
+}
+
+model login_otps {
+  id         Int      @id @default(autoincrement())
+  phone      String   @db.VarChar(20)
+  otp_code   String   @db.VarChar(10)
+  expires_at DateTime @db.DateTime(0)
+  used       Boolean? @default(false)
+
+  @@index([phone, expires_at], map: "idx_phone_expires")
+}
+
+model market_rates {
+  id          Int      @id @default(autoincrement())
+  market_name String   @db.VarChar(100)
+  price_date  DateTime @db.Date
+  price       Int
+
+  @@index([market_name, price_date], map: "idx_market_date")
+}
+
+model order_items {
+  id         Int      @id @default(autoincrement())
+  order_id   Int
+  product_id Int
+  quantity   Int
+  unit_price Int
+  orders     orders   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_items_order")
+  products   products @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_items_product")
+
+  @@index([order_id], map: "fk_items_order")
+  @@index([product_id], map: "fk_items_product")
+}
+
+model orders {
+  id                Int            @id @default(autoincrement())
+  user_id           Int
+  user_order_number Int?
+  status            orders_status? @default(pending)
+  total_amount      Int
+  created_at        DateTime?      @default(now()) @db.Timestamp(0)
+  updated_at        DateTime?      @default(now()) @db.Timestamp(0)
+  order_items       order_items[]
+  users             users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_orders_user")
+
+  @@index([user_id], map: "fk_orders_user")
+}
+
+model product_tags {
+  id         Int      @id @default(autoincrement())
+  product_id Int
+  tag        String   @db.VarChar(100)
+  products   products @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tags_product")
+
+  @@index([product_id], map: "fk_tags_product")
+}
+
+model products {
+  id           Int            @id @default(autoincrement())
+  category_id  Int
+  seller_id    Int?
+  subtype      String?        @db.VarChar(50)
+  name         String         @db.VarChar(255)
+  description  String?        @db.Text
+  price        Int
+  image_url    String?        @db.VarChar(500)
+  rating       Decimal?       @db.Decimal(2, 1)
+  review_count Int?
+  badge        String?        @db.VarChar(100)
+  sold_count   Int?           @default(0)
+  stock_qty    Int?           @default(0)
+  is_active          Boolean?       @default(true)
+  admin_deactivated  Boolean?       @default(false)
+  is_out_of_stock    Boolean?       @default(false)
+  created_at         DateTime?      @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?      @default(now()) @db.Timestamp(0)
+  order_items  order_items[]
+  cart_items   cart_items[]
+  product_tags product_tags[]
+  categories   categories     @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_products_category")
+  sellers      sellers?       @relation(fields: [seller_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "fk_products_seller")
+
+  @@index([category_id], map: "fk_products_category")
+  @@index([seller_id], map: "fk_products_seller")
+}
+
+model testimonials {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(150)
+  location      String?  @db.VarChar(150)
+  role          String?  @db.VarChar(100)
+  rating        Int      @db.TinyInt
+  quote         String   @db.Text
+  avatar_url    String?  @db.VarChar(500)
+  is_active     Boolean? @default(true)
+  display_order Int?     @default(0)
+}
+
+model users {
+  id             Int         @id @default(autoincrement())
+  name           String?     @db.VarChar(150)
+  phone          String      @unique(map: "phone") @db.VarChar(20)
+  email          String?     @unique(map: "email") @db.VarChar(190)
+  role           users_role? @default(farmer)
+  phone_verified Boolean?    @default(false)
+  created_at     DateTime?   @default(now()) @db.Timestamp(0)
+  orders         orders[]
+  cart           cart?
+  address        String?     @db.Text
+  sellers        sellers?
+}
+
+enum orders_status {
+  pending
+  paid
+  shipped
+  completed
+  cancelled
+}
+
+model cart {
+  id         Int          @id @default(autoincrement())
+  user_id    Int          @unique
+  created_at DateTime?    @default(now()) @db.Timestamp(0)
+  updated_at DateTime?    @default(now()) @db.Timestamp(0)
+  users      users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cart_user")
+  cart_items cart_items[]
+
+  @@index([user_id], map: "fk_cart_user")
+}
+
+model cart_items {
+  id         Int       @id @default(autoincrement())
+  cart_id    Int
+  product_id Int
+  quantity   Int       @default(1)
+  added_at   DateTime? @default(now()) @db.Timestamp(0)
+  cart       cart      @relation(fields: [cart_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cart_items_cart")
+  products   products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cart_items_product")
+
+  @@index([cart_id], map: "fk_cart_items_cart")
+  @@index([product_id], map: "fk_cart_items_product")
+}
+
+enum users_role {
+  farmer
+  buyer
+  seller
+  admin
+}
+
+model sellers {
+  id                   Int                    @id @default(autoincrement())
+  user_id              Int                    @unique
+  warehouse_id         Int?
+  is_active            Boolean                @default(true)
+  subscription_end_at  DateTime?              @db.Timestamp(0)
+  created_at           DateTime?              @default(now()) @db.Timestamp(0)
+  updated_at           DateTime?              @default(now()) @db.Timestamp(0)
+  users                users                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_seller_user")
+  products             products[]
+  seller_subscriptions seller_subscriptions[]
+
+  @@index([user_id], map: "fk_seller_user")
+}
+
+model seller_subscriptions {
+  id              Int       @id @default(autoincrement())
+  seller_id       Int
+  plan            String    @db.VarChar(100)
+  status          String    @db.VarChar(30) // active, expired, grace, cancelled
+  start_at        DateTime  @db.Timestamp(0)
+  end_at          DateTime  @db.Timestamp(0)
+  grace_until     DateTime? @db.Timestamp(0)
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  updated_at      DateTime? @default(now()) @db.Timestamp(0)
+  sellers         sellers   @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_subscription_seller")
+
+  @@index([seller_id], map: "fk_subscription_seller")
+  @@index([status], map: "idx_subscription_status")
+  @@index([end_at], map: "idx_subscription_end")
+}

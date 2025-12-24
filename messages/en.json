@@ -1,0 +1,20 @@
+{
+  "HomePage": {
+    "title": "Welcome to ArecaMart",
+    "subtitle": "Your one-stop shop for Arecanut farming needs"
+  },
+  "Navigation": {
+    "home": "Home",
+    "marketRates": "Market Rates",
+    "shop": "Shop",
+    "blog": "Blog",
+    "sell": "Sell Arecanut",
+    "login": "Login"
+  },
+  "LanguageSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "kn": "Kannada",
+    "hi": "Hindi"
+  }
+}
